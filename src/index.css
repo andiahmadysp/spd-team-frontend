@@ -208,7 +208,7 @@ body {
 /* ─── PAGE LAYOUT ────────────────────────────────────────────────── */
 .page-wrapper {
   max-width: 1152px; margin: 0 auto;
-  padding: var(--space-12) var(--space-6) var(--space-20);
+  padding: var(--space-8) var(--space-6) var(--space-6);
 }
 
 /* ─── CARD ───────────────────────────────────────────────────────── */
@@ -576,7 +576,7 @@ body {
 
 /* ─── FOOTER ─────────────────────────────────────────────────────── */
 .page-footer {
-  margin-top: var(--space-20); padding: var(--space-6) 0;
+  margin-top: var(--space-10); padding: var(--space-5) 0 0;
   border-top: 1px solid var(--color-border);
 }
 .footer-inner {

@@ -7,15 +7,8 @@ export default function Footer() {
         <div>
           <p className="footer-brand">Marketo</p>
           <p className="footer-meta">
-            Specialized Platform Development &middot; Binus University &middot; 2024
+            &copy; {new Date().getFullYear()} Marketo Inc. All rights reserved. &middot; Specialized Platform Development &middot; Binus University
           </p>
-        </div>
-        <div className="footer-stack">
-          <span className="footer-chip">Inter</span>
-          <span className="footer-sep" />
-          <span className="footer-chip">Lucide React</span>
-          <span className="footer-sep" />
-          <span className="footer-chip">React + Vite</span>
         </div>
       </div>
     </footer>
