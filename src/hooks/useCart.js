@@ -1,5 +1,6 @@
 // ─── useCart.js ──────────────────────────────────────────────────────────────
-// Custom hook for cart state, supporting backend API sync when authenticated.
+// Custom hook for cart state, strictly integrated with backend API (/cart/:userId).
+// Guest users must log in before adding items to cart or checking out.
 
 import { useState, useCallback, useEffect } from 'react';
 import {
@@ -10,133 +11,127 @@ import {
   clearBackendCart,
 } from '../services/cartService';
 
-export function useCart(user = null, products = []) {
-  const [cart, setCart] = useState(() => {
-    const saved = localStorage.getItem('marketo_local_cart');
-    if (!saved) return [];
-    try {
-      return JSON.parse(saved);
-    } catch {
-      return [];
-    }
+function formatBackendCart(backendCart, products) {
+  if (!backendCart || !Array.isArray(backendCart.items)) return [];
+  return backendCart.items.map((item) => {
+    const pId = typeof item.productId === 'object' ? item.productId._id : item.productId;
+    const fullProduct = products.find((p) => (p.id || p._id) === pId) || {
+      id: pId,
+      _id: pId,
+      name: item.name,
+      price: item.price,
+      vendor: 'Market Store',
+      category: 'elektronik',
+      stock: 99,
+      rating: 4.5,
+      icon: 'package',
+      imageUrl: 'https://picsum.photos/200',
+      description: '',
+      tags: [],
+    };
+    return { product: fullProduct, qty: item.quantity };
   });
+}
 
-  // Sync to localStorage for guest users
+export function useCart(user = null, products = [], onRequireLogin = null) {
+  const [cart, setCart] = useState([]);
+  const userId = user?.id || user?._id;
+
+  // Load backend cart when user is authenticated
   useEffect(() => {
-    if (!user) {
-      localStorage.setItem('marketo_local_cart', JSON.stringify(cart));
+    if (!userId) {
+      setCart([]);
+      return;
     }
-  }, [cart, user]);
 
-  // Load backend cart when user logs in
-  useEffect(() => {
-    if (user?.id) {
-      let isMounted = true;
-      fetchUserCart(user.id)
-        .then((backendCart) => {
-          if (!isMounted || !backendCart || !Array.isArray(backendCart.items)) return;
-          const formatted = backendCart.items.map((item) => {
-            const pId = typeof item.productId === 'object' ? item.productId._id : item.productId;
-            const fullProduct = products.find((p) => p.id === pId || p._id === pId) || {
-              id: pId,
-              _id: pId,
-              name: item.name,
-              price: item.price,
-              vendor: 'Market',
-              category: 'elektronik',
-              stock: 99,
-              rating: 4.5,
-              reviewCount: 10,
-              icon: 'package',
-              description: '',
-              tags: [],
-            };
-            return { product: fullProduct, qty: item.quantity };
-          });
-          setCart(formatted);
-        })
-        .catch((err) => {
-          console.warn('Gagal memuat keranjang dari backend:', err.message);
-        });
-
-      return () => {
-        isMounted = false;
-      };
-    }
-  }, [user?.id, products]);
-
-  // Tambah item ke cart
-  const addToCart = useCallback(
-    (product, qty = 1) => {
-      const pId = product.id || product._id;
-      setCart((prev) => {
-        const existing = prev.find((item) => (item.product.id || item.product._id) === pId);
-        if (existing) {
-          return prev.map((item) =>
-            (item.product.id || item.product._id) === pId
-              ? { ...item, qty: item.qty + qty }
-              : item
-          );
-        }
-        return [...prev, { product, qty }];
+    let isMounted = true;
+    fetchUserCart(userId)
+      .then((backendCart) => {
+        if (!isMounted) return;
+        setCart(formatBackendCart(backendCart, products));
+      })
+      .catch((err) => {
+        console.warn('Gagal memuat keranjang dari backend:', err.message);
       });
 
-      if (user?.id) {
-        addItemToBackendCart(user.id, pId, qty).catch((err) =>
-          console.warn('Gagal sync tambah cart ke backend:', err.message)
-        );
+    return () => {
+      isMounted = false;
+    };
+  }, [userId, products]);
+
+  // Tambah item ke cart backend
+  const addToCart = useCallback(
+    async (product, qty = 1) => {
+      if (!userId) {
+        if (typeof onRequireLogin === 'function') {
+          onRequireLogin();
+        }
+        return { success: false, requireLogin: true };
+      }
+
+      const pId = product.id || product._id;
+      try {
+        const updatedCart = await addItemToBackendCart(userId, pId, qty);
+        setCart(formatBackendCart(updatedCart, products));
+        return { success: true };
+      } catch (err) {
+        console.error('Gagal menambah item ke keranjang backend:', err.message);
+        return { success: false, error: err.message };
       }
     },
-    [user?.id]
+    [userId, products, onRequireLogin]
   );
 
-  // Update quantity
+  // Update quantity di cart backend
   const updateQty = useCallback(
-    (productId, qty) => {
-      if (qty <= 0) {
-        setCart((prev) => prev.filter((item) => (item.product.id || item.product._id) !== productId));
-        if (user?.id) {
-          removeBackendCartItem(user.id, productId).catch((err) =>
-            console.warn('Gagal sync hapus cart di backend:', err.message)
-          );
+    async (productId, qty) => {
+      if (!userId) {
+        if (typeof onRequireLogin === 'function') onRequireLogin();
+        return;
+      }
+
+      try {
+        let updatedCart;
+        if (qty <= 0) {
+          updatedCart = await removeBackendCartItem(userId, productId);
+        } else {
+          updatedCart = await updateBackendCartItemQty(userId, productId, qty);
         }
-      } else {
-        setCart((prev) =>
-          prev.map((item) =>
-            (item.product.id || item.product._id) === productId ? { ...item, qty } : item
-          )
-        );
-        if (user?.id) {
-          updateBackendCartItemQty(user.id, productId, qty).catch((err) =>
-            console.warn('Gagal sync update qty cart di backend:', err.message)
-          );
-        }
+        setCart(formatBackendCart(updatedCart, products));
+      } catch (err) {
+        console.error('Gagal mengupdate kuantitas item di backend:', err.message);
       }
     },
-    [user?.id]
+    [userId, products, onRequireLogin]
   );
 
   const removeFromCart = useCallback(
-    (productId) => {
-      setCart((prev) => prev.filter((item) => (item.product.id || item.product._id) !== productId));
-      if (user?.id) {
-        removeBackendCartItem(user.id, productId).catch((err) =>
-          console.warn('Gagal sync remove cart item di backend:', err.message)
-        );
+    async (productId) => {
+      if (!userId) {
+        if (typeof onRequireLogin === 'function') onRequireLogin();
+        return;
+      }
+
+      try {
+        const updatedCart = await removeBackendCartItem(userId, productId);
+        setCart(formatBackendCart(updatedCart, products));
+      } catch (err) {
+        console.error('Gagal menghapus item dari keranjang backend:', err.message);
       }
     },
-    [user?.id]
+    [userId, products, onRequireLogin]
   );
 
-  const clearCart = useCallback(() => {
-    setCart([]);
-    localStorage.removeItem('marketo_local_cart');
-    if (user?.id) {
-      clearBackendCart(user.id).catch((err) =>
-        console.warn('Gagal clear cart di backend:', err.message)
-      );
+  const clearCart = useCallback(async () => {
+    if (!userId) return;
+    try {
+      const updatedCart = await clearBackendCart(userId);
+      setCart(formatBackendCart(updatedCart, products));
+    } catch (err) {
+      console.error('Gagal mengosongkan keranjang di backend:', err.message);
+      setCart([]);
     }
-  }, [user?.id]);
+  }, [userId, products]);
 
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
   const cartTotal = cart.reduce((sum, item) => sum + item.product.price * item.qty, 0);

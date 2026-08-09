@@ -177,11 +177,18 @@ function RegisterForm({ onSuccess }) {
   );
 }
 
-export default function AuthPage({ onAuthSuccess, onNavigate }) {
+export default function AuthPage({ message, onAuthSuccess, onNavigate }) {
   const [tab, setTab] = useState('login');
 
   return (
     <div style={{ maxWidth: 480, margin: '0 auto' }}>
+      {/* Optional message banner */}
+      {message && (
+        <div style={{ marginBottom: 'var(--space-6)' }}>
+          <Alert variant="warning" title="Perhatian" desc={message} />
+        </div>
+      )}
+
       {/* Heading */}
       <div style={{ textAlign: 'center', marginBottom: 'var(--space-8)' }}>
         <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 'var(--space-2)' }}>

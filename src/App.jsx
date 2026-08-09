@@ -33,7 +33,6 @@ export default function App() {
       getProfile(stored.id)
         .then((u) => { if (u) setUser(u); })
         .catch(() => {
-          // If token invalid/expired
           apiLogout();
           setUser(null);
         });
@@ -59,14 +58,34 @@ export default function App() {
   const [page, setPage] = useState('home');
   const [params, setParams] = useState({});
 
-  const navigate = (newPage, newParams = {}) => {
+  const navigate = useCallback((newPage, newParams = {}) => {
     setPage(newPage);
     setParams(newParams);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  }, []);
 
-  // ─ Cart state ─
-  const { cart, cartCount, cartTotal, addToCart, updateQty, removeFromCart, clearCart } = useCart(user, products);
+  const handleRequireLogin = useCallback(() => {
+    setPage('auth');
+    setParams({ message: 'Silakan masuk terlebih dahulu untuk menambah produk atau mengakses keranjang.' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  // Safe navigate checking login requirement for protected routes
+  const protectedNavigate = useCallback((newPage, newParams = {}) => {
+    const currentUser = getCurrentUser();
+    if ((newPage === 'cart' || newPage === 'checkout') && !currentUser) {
+      handleRequireLogin();
+      return;
+    }
+    navigate(newPage, newParams);
+  }, [navigate, handleRequireLogin]);
+
+  // ─ Cart state (strictly backed by backend API) ─
+  const { cart, cartCount, cartTotal, addToCart, updateQty, removeFromCart, clearCart } = useCart(
+    user,
+    products,
+    handleRequireLogin
+  );
 
   const handleAuthSuccess = (userData) => {
     setUser(userData);
@@ -86,7 +105,7 @@ export default function App() {
         return (
           <HomePage
             products={products}
-            onNavigate={navigate}
+            onNavigate={protectedNavigate}
             onAddToCart={addToCart}
           />
         );
@@ -96,7 +115,7 @@ export default function App() {
           <ProductListPage
             products={products}
             initialCategory={params.category ?? 'all'}
-            onNavigate={navigate}
+            onNavigate={protectedNavigate}
             onAddToCart={addToCart}
           />
         );
@@ -106,40 +125,46 @@ export default function App() {
           <ProductDetailPage
             productId={params.productId}
             products={products}
-            onNavigate={navigate}
+            onNavigate={protectedNavigate}
             onAddToCart={addToCart}
           />
         );
 
       case 'cart':
+        if (!user) {
+          return <AuthPage message="Silakan masuk terlebih dahulu untuk mengakses keranjang." onAuthSuccess={handleAuthSuccess} onNavigate={protectedNavigate} />;
+        }
         return (
           <CartPage
             cart={cart}
             cartTotal={cartTotal}
             onUpdateQty={updateQty}
             onRemove={removeFromCart}
-            onNavigate={navigate}
+            onNavigate={protectedNavigate}
           />
         );
 
       case 'checkout':
+        if (!user) {
+          return <AuthPage message="Silakan masuk terlebih dahulu untuk melakukan checkout." onAuthSuccess={handleAuthSuccess} onNavigate={protectedNavigate} />;
+        }
         return (
           <CheckoutPage
             cart={cart}
             cartTotal={cartTotal}
-            onNavigate={navigate}
+            onNavigate={protectedNavigate}
             onClearCart={clearCart}
           />
         );
 
       case 'auth':
-        return <AuthPage onAuthSuccess={handleAuthSuccess} onNavigate={navigate} />;
+        return <AuthPage message={params.message} onAuthSuccess={handleAuthSuccess} onNavigate={protectedNavigate} />;
 
       default:
         return (
           <HomePage
             products={products}
-            onNavigate={navigate}
+            onNavigate={protectedNavigate}
             onAddToCart={addToCart}
           />
         );
@@ -151,7 +176,7 @@ export default function App() {
       <Navbar
         cartCount={cartCount}
         currentPage={page}
-        onNavigate={navigate}
+        onNavigate={protectedNavigate}
         isLoggedIn={!!user}
         user={user}
         onLogout={handleLogout}
