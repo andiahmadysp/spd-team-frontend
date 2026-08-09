@@ -8,7 +8,7 @@ function PromoBadge({ badgeColor, badge }) {
   if (!badge) return null;
   const styles = {
     red:     { background: 'var(--red-600)',   color: '#fff' },
-    dark:    { background: 'var(--gray-900)',   color: '#fff' },
+    dark:    { background: '#003366',           color: '#fff' },
     amber:   { background: 'var(--amber-500)', color: 'var(--gray-900)' },
     neutral: { background: 'var(--gray-200)',   color: 'var(--gray-700)' },
   };

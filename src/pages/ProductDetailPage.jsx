@@ -110,7 +110,7 @@ export default function ProductDetailPage({ productId, products = [], onNavigate
                 className="promo-badge"
                 style={{
                   background: product.badgeColor === 'red'   ? 'var(--red-600)'
-                    : product.badgeColor === 'dark'  ? 'var(--gray-900)'
+                    : product.badgeColor === 'dark'  ? '#003366'
                     : product.badgeColor === 'amber' ? 'var(--amber-500)' : 'var(--gray-200)',
                   color: product.badgeColor === 'amber' ? 'var(--gray-900)' : '#fff',
                 }}
