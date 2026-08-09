@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "deploy:dist": "vite build && rm -rf /tmp/dist-repo && mkdir -p /tmp/dist-repo && cp -r dist/* /tmp/dist-repo/ && cp dist/.htaccess /tmp/dist-repo/.htaccess 2>/dev/null || true && cd /tmp/dist-repo && git init && git checkout -b dist && git add -A && git commit -m \"build: deploy static dist for Hostinger\" && git remote add origin https://github.com/andiahmadysp/spd-team-frontend.git && git push origin dist --force",
+    "deploy:dist": "node scripts/deploy-dist.js",
     "lint": "oxlint",
     "preview": "vite preview"
   },
