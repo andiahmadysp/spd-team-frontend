@@ -18,11 +18,13 @@ export default function ProductDetailPage({ productId, products = [], onNavigate
   const [product, setProduct] = useState(() => {
     return products.find((p) => (p.id || p._id) === productId) || getDummyProductById(productId);
   });
-  const [qty, setQty]     = useState(1);
-  const [added, setAdded] = useState(false);
+  const [qty, setQty]         = useState(1);
+  const [added, setAdded]     = useState(false);
   const [loading, setLoading] = useState(!product);
+  const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
+    setImgError(false);
     const existing = products.find((p) => (p.id || p._id) === productId);
     if (existing) {
       setProduct(existing);
@@ -73,6 +75,8 @@ export default function ProductDetailPage({ productId, products = [], onNavigate
     .filter((p) => p.category === product.category && (p.id || p._id) !== (product.id || product._id))
     .slice(0, 4);
 
+  const numericRating = typeof product.rating === 'number' ? product.rating : parseFloat(product.rating) || 0;
+
   return (
     <div className="stack-12">
 
@@ -90,8 +94,13 @@ export default function ProductDetailPage({ productId, products = [], onNavigate
 
         {/* Image */}
         <div className="detail-img">
-          {product.imageUrl && product.imageUrl.startsWith('http') && !product.imageUrl.includes('picsum') ? (
-            <img src={product.imageUrl} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          {product.imageUrl && !imgError ? (
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              onError={() => setImgError(true)}
+            />
           ) : (
             <IconComponent className="detail-img-icon" />
           )}
@@ -124,15 +133,15 @@ export default function ProductDetailPage({ productId, products = [], onNavigate
               </h1>
             </div>
 
-            {/* Rating */}
+            {/* Rating (Ulasan removed as requested) */}
             <div className="row row-gap-2">
               <div className="stars">
                 {[1,2,3,4,5].map((s) => (
-                  <Star key={s} style={{ width: 14, height: 14, fill: s <= product.rating ? 'currentColor' : 'var(--gray-200)', stroke: s <= product.rating ? 'currentColor' : 'var(--gray-300)' }} />
+                  <Star key={s} style={{ width: 14, height: 14, fill: s <= Math.round(numericRating) ? 'currentColor' : 'var(--gray-200)', stroke: s <= Math.round(numericRating) ? 'currentColor' : 'var(--gray-300)' }} />
                 ))}
               </div>
-              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)' }}>
-                {product.rating}.0 &middot; {product.reviewCount || 12} ulasan
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
+                {numericRating.toFixed(1)} / 5
               </span>
             </div>
 

@@ -1,10 +1,12 @@
 // ─── CartPage ─────────────────────────────────────────────────────────────────
+import { useState } from 'react';
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { formatRupiah } from '../data/dummy';
 
 function CartItem({ item, onUpdateQty, onRemove }) {
   const { product, qty } = item;
+  const [imgError, setImgError] = useState(false);
 
   const iconName = product.icon
     ? product.icon.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join('')
@@ -12,10 +14,19 @@ function CartItem({ item, onUpdateQty, onRemove }) {
   const IconComponent = Icons[iconName] || Icons.Package;
 
   return (
-    <div id={`cart-item-${product.id}`} className="cart-item">
+    <div id={`cart-item-${product.id || product._id}`} className="cart-item">
       {/* Thumbnail */}
-      <div className="cart-item-img">
-        <IconComponent style={{ width: 22, height: 22 }} />
+      <div className="cart-item-img" style={{ overflow: 'hidden' }}>
+        {product.imageUrl && !imgError ? (
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <IconComponent style={{ width: 22, height: 22 }} />
+        )}
       </div>
 
       {/* Info */}
@@ -30,16 +41,16 @@ function CartItem({ item, onUpdateQty, onRemove }) {
         <div className="qty-selector">
           <button
             className="qty-btn"
-            id={`cart-qty-minus-${product.id}`}
-            onClick={() => onUpdateQty(product.id, qty - 1)}
+            id={`cart-qty-minus-${product.id || product._id}`}
+            onClick={() => onUpdateQty(product.id || product._id, qty - 1)}
           >
             <Minus style={{ width: 12, height: 12 }} />
           </button>
           <span className="qty-value">{qty}</span>
           <button
             className="qty-btn"
-            id={`cart-qty-plus-${product.id}`}
-            onClick={() => onUpdateQty(product.id, qty + 1)}
+            id={`cart-qty-plus-${product.id || product._id}`}
+            onClick={() => onUpdateQty(product.id || product._id, qty + 1)}
           >
             <Plus style={{ width: 12, height: 12 }} />
           </button>
@@ -50,14 +61,48 @@ function CartItem({ item, onUpdateQty, onRemove }) {
         </span>
 
         <button
-          id={`cart-remove-${product.id}`}
+          id={`cart-remove-${product.id || product._id}`}
           className="action-btn danger"
           aria-label="Hapus"
-          onClick={() => onRemove(product.id)}
+          onClick={() => onRemove(product.id || product._id)}
         >
           <Trash2 style={{ width: 14, height: 14 }} />
         </button>
       </div>
+    </div>
+  );
+}
+
+function OrderSummaryItem({ item }) {
+  const [imgError, setImgError] = useState(false);
+  const iconName = item.product.icon
+    ? item.product.icon.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join('')
+    : 'Package';
+  const IC = Icons[iconName] || Icons.Package;
+
+  return (
+    <div className="order-summary-item">
+      <div className="order-summary-item-img" style={{ overflow: 'hidden' }}>
+        {item.product.imageUrl && !imgError ? (
+          <img
+            src={item.product.imageUrl}
+            alt={item.product.name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <IC style={{ width: 13, height: 13 }} />
+        )}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 'var(--text-xs)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {item.product.name}
+        </p>
+        <p style={{ fontSize: 10, color: 'var(--color-text-tertiary)' }}>×{item.qty}</p>
+      </div>
+      <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, flexShrink: 0 }}>
+        {formatRupiah(item.product.price * item.qty)}
+      </span>
     </div>
   );
 }
@@ -102,7 +147,7 @@ export default function CartPage({ cart, cartTotal, onUpdateQty, onRemove, onNav
         <div className="stack-3">
           {cart.map((item) => (
             <CartItem
-              key={item.product.id}
+              key={item.product.id || item.product._id}
               item={item}
               onUpdateQty={onUpdateQty}
               onRemove={onRemove}
@@ -119,26 +164,7 @@ export default function CartPage({ cart, cartTotal, onUpdateQty, onRemove, onNav
           {/* Items list */}
           <div className="stack-2">
             {cart.map((item) => (
-              <div key={item.product.id} className="order-summary-item">
-                <div className="order-summary-item-img">
-                  {(() => {
-                    const n = item.product.icon
-                      ? item.product.icon.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join('')
-                      : 'Package';
-                    const IC = Icons[n] || Icons.Package;
-                    return <IC style={{ width: 13, height: 13 }} />;
-                  })()}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 'var(--text-xs)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {item.product.name}
-                  </p>
-                  <p style={{ fontSize: 10, color: 'var(--color-text-tertiary)' }}>×{item.qty}</p>
-                </div>
-                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, flexShrink: 0 }}>
-                  {formatRupiah(item.product.price * item.qty)}
-                </span>
-              </div>
+              <OrderSummaryItem key={item.product.id || item.product._id} item={item} />
             ))}
           </div>
 

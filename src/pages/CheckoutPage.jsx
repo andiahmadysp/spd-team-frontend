@@ -4,6 +4,40 @@ import { CreditCard, X, CircleCheck, ArrowLeft } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { formatRupiah } from '../data/dummy';
 
+function OrderSummaryItem({ item }) {
+  const [imgError, setImgError] = useState(false);
+  const iconName = item.product.icon
+    ? item.product.icon.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join('')
+    : 'Package';
+  const IC = Icons[iconName] || Icons.Package;
+
+  return (
+    <div className="order-summary-item">
+      <div className="order-summary-item-img" style={{ overflow: 'hidden' }}>
+        {item.product.imageUrl && !imgError ? (
+          <img
+            src={item.product.imageUrl}
+            alt={item.product.name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <IC style={{ width: 13, height: 13 }} />
+        )}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 'var(--text-xs)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {item.product.name}
+        </p>
+        <p style={{ fontSize: 10, color: 'var(--color-text-tertiary)' }}>×{item.qty}</p>
+      </div>
+      <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, flexShrink: 0 }}>
+        {formatRupiah(item.product.price * item.qty)}
+      </span>
+    </div>
+  );
+}
+
 // ─ Confirmation Modal ─
 function ConfirmModal({ cart, cartTotal, shipping, onClose, onConfirm }) {
   const total = cartTotal + shipping;
@@ -23,7 +57,7 @@ function ConfirmModal({ cart, cartTotal, shipping, onClose, onConfirm }) {
         <div className="modal-body">
           <div className="modal-summary stack-2">
             {cart.map((item) => (
-              <div key={item.product.id} className="modal-line">
+              <div key={item.product.id || item.product._id} className="modal-line">
                 <span className="modal-line-label">{item.product.name} ×{item.qty}</span>
                 <span className="modal-line-value">{formatRupiah(item.product.price * item.qty)}</span>
               </div>
@@ -269,26 +303,7 @@ export default function CheckoutPage({ cart, cartTotal, onNavigate, onClearCart 
           <div className="order-summary-body stack-4">
             <div className="stack-2">
               {cart.map((item) => (
-                <div key={item.product.id} className="order-summary-item">
-                  <div className="order-summary-item-img">
-                    {(() => {
-                      const n = item.product.icon
-                        ? item.product.icon.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join('')
-                        : 'Package';
-                      const IC = Icons[n] || Icons.Package;
-                      return <IC style={{ width: 13, height: 13 }} />;
-                    })()}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 'var(--text-xs)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {item.product.name}
-                    </p>
-                    <p style={{ fontSize: 10, color: 'var(--color-text-tertiary)' }}>×{item.qty}</p>
-                  </div>
-                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, flexShrink: 0 }}>
-                    {formatRupiah(item.product.price * item.qty)}
-                  </span>
-                </div>
+                <OrderSummaryItem key={item.product.id || item.product._id} item={item} />
               ))}
             </div>
 

@@ -1,4 +1,5 @@
 // ─── ProductCard ─────────────────────────────────────────────────────────────
+import { useState } from 'react';
 import { Heart, ShoppingCart } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { formatRupiah } from '../../data/dummy';
@@ -18,27 +19,30 @@ function PromoBadge({ badgeColor, badge }) {
   );
 }
 
-function StarRating({ rating, reviewCount }) {
+function StarRating({ rating }) {
+  const numericRating = typeof rating === 'number' ? rating : parseFloat(rating) || 0;
   return (
     <div className="product-rating">
       <div className="stars">
         {[1, 2, 3, 4, 5].map((star) => (
           <svg
             key={star} width="10" height="10" viewBox="0 0 24 24"
-            fill={star <= rating ? 'currentColor' : 'var(--gray-200)'}
-            stroke={star <= rating ? 'currentColor' : 'var(--gray-300)'}
+            fill={star <= Math.round(numericRating) ? 'currentColor' : 'var(--gray-200)'}
+            stroke={star <= Math.round(numericRating) ? 'currentColor' : 'var(--gray-300)'}
             strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
           >
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
           </svg>
         ))}
       </div>
-      <span className="rating-count">({reviewCount})</span>
+      <span className="rating-count" style={{ fontWeight: 500 }}>{numericRating.toFixed(1)}</span>
     </div>
   );
 }
 
 export default function ProductCard({ product, onCardClick, onAddToCart }) {
+  const [imgError, setImgError] = useState(false);
+
   const iconName = product.icon
     ? product.icon.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join('')
     : 'Package';
@@ -52,13 +56,22 @@ export default function ProductCard({ product, onCardClick, onAddToCart }) {
 
   return (
     <div
-      id={`product-card-${product.id}`}
+      id={`product-card-${product.id || product._id}`}
       className={`product-card${isOutOfStock ? ' is-disabled' : ''}`}
       onClick={() => onCardClick(product)}
     >
       {/* Image area */}
       <div className="product-img">
-        <IconComponent className="product-img-icon" />
+        {product.imageUrl && !imgError ? (
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <IconComponent className="product-img-icon" />
+        )}
 
         {product.badge && (
           <span className="product-badge">
@@ -91,7 +104,7 @@ export default function ProductCard({ product, onCardClick, onAddToCart }) {
           </div>
           {!isOutOfStock && (
             <button
-              id={`add-to-cart-${product.id}`}
+              id={`add-to-cart-${product.id || product._id}`}
               className="btn btn-primary btn-sm"
               style={{ padding: '4px 8px', height: 26, minWidth: 'auto', borderRadius: 'var(--radius-md)' }}
               onClick={handleAddToCart}
@@ -102,7 +115,7 @@ export default function ProductCard({ product, onCardClick, onAddToCart }) {
           )}
         </div>
 
-        <StarRating rating={product.rating} reviewCount={product.reviewCount} />
+        <StarRating rating={product.rating} />
       </div>
     </div>
   );
