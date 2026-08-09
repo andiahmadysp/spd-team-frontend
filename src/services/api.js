@@ -1,7 +1,7 @@
 // ─── API Client Service ────────────────────────────────────────────────────────
 // Centralized HTTP client using standard fetch API to communicate with spd_team_backend
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://shop-api.tribuana.dev';
 
 export function getStoredToken() {
   return localStorage.getItem('marketo_token') || null;
